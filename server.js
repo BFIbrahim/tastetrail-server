@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'user' }
+  role: { type: String, default: 'user' },
+  profilePicture: { type: String, default: '' }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -64,8 +65,6 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 app.post('/login', async (req, res) => {
   try {
