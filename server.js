@@ -298,7 +298,6 @@ app.post("/recipes", async (req, res) => {
   }
 });
 
-// Get all recipes
 app.get("/recipes", async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ createdAt: -1 });
@@ -309,7 +308,88 @@ app.get("/recipes", async (req, res) => {
   }
 });
 
+app.delete("/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+
+    const recipe = await Recipe.findById(id);
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    await Recipe.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Recipe deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting recipe:", error);
+    res.status(500).json({ message: "Failed to delete recipe" });
+  }
+});
+
+app.patch("/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+
+    const recipe = await Recipe.findById(id);
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    Object.keys(updatedData).forEach((key) => {
+      recipe[key] = updatedData[key];
+    });
+
+    await recipe.save();
+
+    res.status(200).json({
+      message: "Recipe updated successfully",
+      recipe,
+    });
+  } catch (error) {
+    console.error("Error updating recipe:", error);
+    res.status(500).json({ message: "Failed to update recipe" });
+  }
+});
+
+app.patch("/recipes/:id/assign-category", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+
+    if (!category || !category.trim()) {
+      return res.status(400).json({ message: "Category is required" });
+    }
+
+    const recipe = await Recipe.findById(id);
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    recipe.category = category.trim().toLowerCase();
+    await recipe.save();
+
+    res.status(200).json({
+      message: "Category assigned successfully",
+      recipe,
+    });
+  } catch (error) {
+    console.error("Error assigning category:", error);
+    res.status(500).json({ message: "Failed to assign category" });
+  }
+});
 
 app.get('/', (req, res) => res.send('TasteTrail Server is running'));
 
