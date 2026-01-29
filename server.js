@@ -60,6 +60,25 @@ const categorySchema = new mongoose.Schema({
 })
 const Category = mongoose.model('Category', categorySchema);
 
+const savedRecipeSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    recipeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Recipe",
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+const SavedRecipe = mongoose.model("SavedRecipe", savedRecipeSchema);
+
+
 
 // const verifyToken = (req, res, next) => {
 //   const token = req.headers.authorization?.split(" ")[1];
@@ -423,6 +442,61 @@ app.patch("/recipes/:id/assign-category", async (req, res) => {
     res.status(500).json({ message: "Failed to assign category" });
   }
 });
+
+app.post("/saved-recipes", authMiddleware, async (req, res) => {
+  try {
+    const { recipeId } = req.body;
+    const userId = req.userId;
+
+    if (!recipeId) {
+      return res.status(400).json({ message: "Recipe ID required" });
+    }
+
+    const alreadySaved = await SavedRecipe.findOne({ userId, recipeId });
+
+    if (alreadySaved) {
+      return res.status(400).json({ message: "Already saved" });
+    }
+
+    const saved = await SavedRecipe.create({ userId, recipeId });
+
+    res.status(201).json(saved);
+  } catch (error) {
+    console.error("Save recipe error:", error);
+    res.status(500).json({ message: "Failed to save recipe" });
+  }
+});
+
+app.get("/saved-recipes", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    const savedRecipes = await SavedRecipe.find({ userId }).populate("recipeId");
+    res.send(savedRecipes);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Server Error" });
+  }
+});
+
+app.delete("/saved-recipes/:id", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId;
+
+  try {
+    const savedRecipe = await SavedRecipe.findOne({ _id: id, userId });
+    if (!savedRecipe) {
+      return res.status(404).send({ message: "Saved recipe not found" });
+    }
+
+    await SavedRecipe.deleteOne({ _id: id });
+    res.send({ message: "Recipe removed from your cookbook" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
 
 app.get('/', (req, res) => res.send('TasteTrail Server is running'));
 
