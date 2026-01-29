@@ -79,7 +79,7 @@ const Category = mongoose.model('Category', categorySchema);
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  console.log("Auth Header:", authHeader);
+
   if (!authHeader) return res.status(401).json({ error: "No token" });
 
   const token = authHeader.split(" ")[1];
@@ -94,7 +94,7 @@ const authMiddleware = (req, res, next) => {
 
 app.post('/register', async (req, res) => {
   try {
-    const { name, email, password, profilePicture } = req.body; 
+    const { name, email, password, profilePicture } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -121,10 +121,10 @@ app.post('/register', async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { 
-        name: newUser.name, 
-        role: newUser.role, 
-        profilePicture: newUser.profilePicture 
+      user: {
+        name: newUser.name,
+        role: newUser.role,
+        profilePicture: newUser.profilePicture
       },
     });
 
@@ -280,7 +280,7 @@ app.delete("/categories/:id", async (req, res) => {
 
 app.post("/recipes", async (req, res) => {
   try {
-    const recipeData = req.body; 
+    const recipeData = req.body;
 
     const newRecipe = new Recipe({
       ...recipeData
@@ -298,6 +298,16 @@ app.post("/recipes", async (req, res) => {
   }
 });
 
+// Get all recipes
+app.get("/recipes", async (req, res) => {
+  try {
+    const recipes = await Recipe.find().sort({ createdAt: -1 });
+    res.status(200).json(recipes);
+  } catch (error) {
+    console.error("Error fetching recipes:", error);
+    res.status(500).json({ message: "Failed to fetch recipes" });
+  }
+});
 
 
 
