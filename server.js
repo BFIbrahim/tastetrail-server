@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
-  profilePicture: { type: String, default: '' }
+  profilePicture: { type: String, default: '' },
 });
 const User = mongoose.model('User', userSchema);
 
@@ -57,22 +57,36 @@ const categorySchema = new mongoose.Schema({
 const Category = mongoose.model('Category', categorySchema);
 
 
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+// const verifyToken = (req, res, next) => {
+//   const token = req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "Access Denied. No token provided." });
-  }
+//   if (!token) {
+//     return res.status(401).json({ message: "Access Denied. No token provided." });
+//   }
 
+//   try {
+//     const verified = jwt.verify(token, process.env.JWT_SECRET);
+//     req.user = verified;
+//     next();
+//   } catch (err) {
+//     res.status(400).json({ message: "Invalid Token" });
+//   }
+// };
+
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  console.log("Auth Header:", authHeader);
+  if (!authHeader) return res.status(401).json({ error: "No token" });
+
+  const token = authHeader.split(" ")[1];
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = payload.id;
     next();
   } catch (err) {
-    res.status(400).json({ message: "Invalid Token" });
+    return res.status(401).json({ error: "Invalid token" });
   }
 };
-
 
 app.post('/register', async (req, res) => {
   try {
@@ -94,12 +108,23 @@ app.post('/register', async (req, res) => {
 
     await newUser.save();
 
-    res.status(201).json({ message: "User Registered Successfully" });
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: { name: newUser.name, role: newUser.role }
+    });
 
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
 
 app.post('/login', async (req, res) => {
   try {
@@ -116,17 +141,22 @@ app.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    res.json({ token, user: { name: user.name, role: user.role } });
+    res.json({ token, id: user._id, user: { name: user.name, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
 
-app.get('/api/auth/me', async (req, res) => {
+app.get('/users/me', authMiddleware, async (req, res) => {
+  const user = await User.findById(req.userId).select("-password");
+  res.json(user.name);
+});
+
+app.get('/users', async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    res.json(user);
-  } catch (err) {
+    const users = await User.find()
+    res.json(users);
+  } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
