@@ -207,6 +207,39 @@ app.get('/meal-plans', async (req, res) => {
   }
 });
 
+app.patch("/meal-plans/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid meal plan ID" });
+    }
+
+    const allowedStatus = ["Planned", "Cooking", "Cooked"];
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const mealPlan = await MealPlan.findById(id);
+    if (!mealPlan) {
+      return res.status(404).json({ message: "Meal plan not found" });
+    }
+
+    mealPlan.status = status;
+    await mealPlan.save();
+
+    res.status(200).json({
+      message: "Status updated successfully",
+      mealPlan,
+    });
+  } catch (error) {
+    console.error("Error updating meal plan status:", error);
+    res.status(500).json({ message: "Failed to update status" });
+  }
+});
+
+
 app.post("/categories", async (req, res) => {
   try {
     const { name } = req.body;
