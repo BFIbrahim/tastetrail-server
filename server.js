@@ -22,6 +22,41 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
+const recipeSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  category: { type: String, required: true },
+  cuisine: { type: String, required: true },
+  ingredients: { type: [String], required: true },
+  instructions: { type: String, required: true },
+  calories: Number,
+  image: String,
+  cookingTime: String,
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
+const Recipe = mongoose.model('Recipe', recipeSchema);
+
+const mealPlanSchema = new mongoose.Schema({
+  userId: { type: Number, ref: 'User', required: true },
+  recipeId: { type: Number, ref: 'Recipe', required: true },
+  date: { type: Date, required: true },
+  dayOfWeek: { type: String, required: true },
+  email: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ['Planned', 'Cooking', 'Cooked'],
+    default: 'Planned'
+  },
+  createdAt: { type: Date, default: Date.now }
+});
+const MealPlan = mongoose.model('MealPlan', mealPlanSchema);
+
+const categorySchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true }
+})
+const Category = mongoose.model('Category', categorySchema);
+
+
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
 
@@ -87,7 +122,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', verifyToken, async (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
@@ -95,6 +130,28 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+app.post("/meal-plans", async (req, res) => {
+  try {
+    const plans = req.body;
+
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({ message: "No meal plans provided" });
+    }
+
+    const result = await MealPlan.insertMany(plans);
+
+    res.status(201).json({
+      message: "Meal plans saved successfully",
+      data: result
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 app.get('/', (req, res) => res.send('TasteTrail Server is running'));
 
