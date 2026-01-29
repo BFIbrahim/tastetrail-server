@@ -197,6 +197,77 @@ app.get('/meal-plans', async (req, res) => {
   }
 });
 
+app.post("/categories", async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    const formattedName = name.trim().toLowerCase();
+
+    const existingCategory = await Category.findOne({ name: formattedName });
+    if (existingCategory) {
+      return res.status(409).json({ message: "Category already exists" });
+    }
+
+    const newCategory = new Category({
+      name: formattedName,
+    });
+
+    const savedCategory = await newCategory.save();
+
+    res.status(201).json(savedCategory);
+  } catch (error) {
+    console.error("Error creating category:", error);
+    res.status(500).json({ message: "Failed to create category" });
+  }
+});
+
+
+app.get("/categories", async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ name: 1 });
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ message: "Failed to fetch categories" });
+  }
+});
+
+app.delete("/categories/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const isUsed = await Recipe.findOne({ category: category.name });
+    if (isUsed) {
+      return res.status(409).json({
+        message: "Category is used in recipes. Cannot delete."
+      });
+    }
+
+    await Category.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: "Category deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    res.status(500).json({ message: "Failed to delete category" });
+  }
+});
+
+
 
 
 app.get('/', (req, res) => res.send('TasteTrail Server is running'));
