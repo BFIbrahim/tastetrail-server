@@ -22,19 +22,23 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-const recipeSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  category: { type: String, required: true },
-  cuisine: { type: String, required: true },
-  ingredients: { type: [String], required: true },
-  instructions: { type: String, required: true },
-  calories: Number,
-  image: String,
-  cookingTime: String,
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-}, { timestamps: true });
+const recipeSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    category: { type: String, required: true }, // Breakfast, Lunch, Dinner
+    cuisine: { type: String, required: true }, // Italian, Indian, Bangla
+    ingredients: { type: [String], required: true },
+    instructions: { type: String, required: true },
+    calories: { type: Number },
+    cookingTime: { type: String },
+    image: { type: String, required: false, default: "" },
+    createdBy: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-const Recipe = mongoose.model('Recipe', recipeSchema);
+const Recipe = mongoose.model("Recipe", recipeSchema);
+
 
 const mealPlanSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -90,7 +94,7 @@ const authMiddleware = (req, res, next) => {
 
 app.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, profilePicture } = req.body; 
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -103,7 +107,8 @@ app.post('/register', async (req, res) => {
     const newUser = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      profilePicture
     });
 
     await newUser.save();
@@ -116,10 +121,15 @@ app.post('/register', async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { name: newUser.name, role: newUser.role }
+      user: { 
+        name: newUser.name, 
+        role: newUser.role, 
+        profilePicture: newUser.profilePicture 
+      },
     });
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -264,6 +274,27 @@ app.delete("/categories/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting category:", error);
     res.status(500).json({ message: "Failed to delete category" });
+  }
+});
+
+
+app.post("/recipes", async (req, res) => {
+  try {
+    const recipeData = req.body; 
+
+    const newRecipe = new Recipe({
+      ...recipeData
+    });
+
+    await newRecipe.save();
+
+    res.status(201).json({
+      message: "Recipe added successfully",
+      recipe: newRecipe,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to add recipe" });
   }
 });
 
