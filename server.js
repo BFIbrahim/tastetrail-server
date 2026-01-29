@@ -360,6 +360,29 @@ app.get("/recipes", async (req, res) => {
   }
 });
 
+
+app.get("/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid recipe ID" });
+    }
+
+    const recipe = await Recipe.findById(id);
+
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    res.status(200).json(recipe);
+  } catch (error) {
+    console.error("Error fetching recipe by ID:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 app.delete("/recipes/:id", async (req, res) => {
   try {
     const { id } = req.params;
