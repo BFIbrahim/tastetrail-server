@@ -37,8 +37,8 @@ const recipeSchema = new mongoose.Schema({
 const Recipe = mongoose.model('Recipe', recipeSchema);
 
 const mealPlanSchema = new mongoose.Schema({
-  userId: { type: Number, ref: 'User', required: true },
-  recipeId: { type: Number, ref: 'Recipe', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  recipeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe', required: true },
   date: { type: Date, required: true },
   dayOfWeek: { type: String, required: true },
   email: { type: String, required: true },
@@ -124,8 +124,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
-
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -149,18 +147,8 @@ app.post('/login', async (req, res) => {
 
 app.get('/users/me', authMiddleware, async (req, res) => {
   const user = await User.findById(req.userId).select("-password");
-  res.json(user.name);
+  res.json(user);
 });
-
-app.get('/users', async (req, res) => {
-  try {
-    const users = await User.find()
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 
 app.post("/meal-plans", async (req, res) => {
   try {
@@ -181,6 +169,34 @@ app.post("/meal-plans", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+app.get('/meal-plans', async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const mealPlans = await MealPlan.find({ email })
+      .populate('recipeId')
+      .sort({ date: 1 });
+
+    const formattedPlans = mealPlans.map(plan => ({
+      _id: plan._id,
+      recipe: plan.recipeId,
+      date: plan.date,
+      dayOfWeek: plan.dayOfWeek,
+      status: plan.status
+    }));
+
+    res.json(formattedPlans);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 app.get('/', (req, res) => res.send('TasteTrail Server is running'));
